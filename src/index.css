@@ -12,9 +12,6 @@ body {
 #root {
   width: 100%;
   min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   background-color: transparent;
   pointer-events: none;
   position: relative;
@@ -23,12 +20,20 @@ body {
 
 .portfolio-container {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.hero-section {
+  display: flex;
   justify-content: center;
   align-items: center;
   width: 100%;
-  padding: 2rem;
+  min-height: 100vh;
   box-sizing: border-box;
-  pointer-events: none;
 }
 
 .portfolio-content {
@@ -37,6 +42,75 @@ body {
   align-items: center;
   text-align: center;
   pointer-events: none;
+}
+
+/* About Section Styling */
+.about-section {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 6rem 2rem;
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 1.4s cubic-bezier(0.16, 1, 0.3, 1), transform 1.4s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.about-section.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.about-inner {
+  max-width: 720px;
+  width: 100%;
+  text-align: left;
+  pointer-events: none;
+}
+
+.about-heading {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #888888;
+  letter-spacing: 0.25em;
+  margin-bottom: 2.5rem;
+  text-transform: uppercase;
+}
+
+.about-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.about-lead {
+  font-size: 1.75rem;
+  font-weight: 300;
+  line-height: 1.5;
+  color: #111111;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.about-lead strong {
+  font-weight: 700;
+  color: #000000;
+}
+
+.about-text {
+  font-size: 1.125rem;
+  font-weight: 300;
+  line-height: 1.8;
+  color: #444444;
+  margin: 0;
+}
+
+.about-text strong {
+  font-weight: 700;
+  color: #000000;
 }
 
 .greeting {
@@ -66,6 +140,14 @@ body {
   .name {
     font-size: 4rem;
   }
+
+  .about-lead {
+    font-size: 1.5rem;
+  }
+
+  .about-text {
+    font-size: 1.05rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -76,5 +158,17 @@ body {
   
   .name {
     font-size: 2.75rem;
+  }
+
+  .about-section {
+    padding: 4rem 1.5rem;
+  }
+
+  .about-lead {
+    font-size: 1.25rem;
+  }
+
+  .about-text {
+    font-size: 0.95rem;
   }
 }
