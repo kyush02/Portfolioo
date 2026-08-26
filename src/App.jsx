@@ -13,6 +13,8 @@ const GREETINGS = [
   "안녕하세요"
 ];
 
+import FluidBackground from './FluidBackground';
+
 function App() {
   const [greeting, setGreeting] = useState('');
   const [index, setIndex] = useState(0);
@@ -47,12 +49,15 @@ function App() {
   }, [greeting, isDeleting, index]);
 
   return (
-    <div className="portfolio-container">
-      <div className="portfolio-content">
-        <h2 className="greeting">{greeting} , I'm</h2>
-        <h1 className="name">Kyush Kumar</h1>
+    <>
+      <FluidBackground />
+      <div className="portfolio-container">
+        <div className="portfolio-content">
+          <h2 className="greeting">{greeting} , I'm</h2>
+          <h1 className="name">Kyush Kumar</h1>
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 
