@@ -10,12 +10,19 @@ const GREETINGS = [
   "Hola",
   "Bonjour",
   "Ciao",
-  "안녕하세요"
+  "> npm start"
 ];
 
 import FluidBackground from './FluidBackground';
+import RopeIntro from './RopeIntro';
 
 function App() {
+  const [showIntro, setShowIntro] = useState(() => {
+    if (typeof window !== 'undefined' && window.location.search.includes('intro=true')) {
+      return true;
+    }
+    return !sessionStorage.getItem('ropeIntroShown');
+  });
   const [greeting, setGreeting] = useState('');
   const [index, setIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -69,6 +76,14 @@ function App() {
 
   return (
     <>
+      {showIntro && (
+        <RopeIntro
+          onComplete={() => {
+            sessionStorage.setItem('ropeIntroShown', 'true');
+            setShowIntro(false);
+          }}
+        />
+      )}
       <FluidBackground />
       <div className="portfolio-container">
         <section className="hero-section">

@@ -172,3 +172,106 @@ body {
     font-size: 0.95rem;
   }
 }
+
+/* --- Rope Intro Overlay & Elements --- */
+.rope-intro {
+  position: fixed;
+  top: 0;
+  left: 0;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #ffffff;
+  z-index: 9999;
+  pointer-events: auto;
+  opacity: 1;
+  transform: scale(1);
+  filter: blur(0px);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+              filter 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.rope-intro--fade {
+  opacity: 0;
+  transform: scale(1.04);
+  filter: blur(10px);
+  pointer-events: none;
+}
+
+.rope-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: transparent;
+  z-index: 10000;
+  pointer-events: auto;
+  display: block;
+}
+
+.rope-prompt {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  pointer-events: none;
+  z-index: 10001;
+  animation: fadeInPrompt 0.5s ease forwards;
+}
+
+.rope-prompt-text {
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: #444444;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.rope-arrow {
+  font-size: 1.25rem;
+  color: #555555;
+  font-weight: 700;
+  animation: bounceArrow 1.4s infinite ease-in-out;
+}
+
+@keyframes bounceArrow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(6px); }
+}
+
+@keyframes fadeInPrompt {
+  from { opacity: 0; transform: translate(-50%, -8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.skip-intro-btn {
+  position: absolute;
+  top: 1.75rem;
+  right: 1.75rem;
+  background: #ffffff;
+  border: 1px solid #d0d0d0;
+  color: #444444;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 0.55rem 1.2rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: all 0.25s ease;
+  text-transform: uppercase;
+  z-index: 10002;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.skip-intro-btn:hover {
+  background-color: #000000;
+  color: #ffffff;
+  border-color: #000000;
+}
