@@ -6,6 +6,10 @@ const DAMPING = 0.98;
 const CONSTRAINT_ITERS = 10;
 const SESSION_KEY = 'portfolioIntroPlayed';
 
+// How long after the rope is released before the site is actually revealed.
+// Keep this in sync with the curtain transition duration in the CSS below.
+const REVEAL_MS = 1000;
+
 export default function RopeIntro({ onComplete }) {
   const canvasRef = useRef(null);
   const frameRef = useRef(null);
@@ -23,7 +27,8 @@ export default function RopeIntro({ onComplete }) {
 
   const [showPrompt, setShowPrompt] = useState(false);
   const [promptY, setPromptY] = useState(0);
-  const [fadeOut, setFadeOut] = useState(false);
+  const [fadeOut, setFadeOut] = useState(false); // rope/canvas fades quickly
+  const [reveal, setReveal] = useState(false);    // curtain panels split apart
   const [skip, setSkip] = useState(false);
 
   // Scene should only ever play once per browser session.
@@ -38,8 +43,17 @@ export default function RopeIntro({ onComplete }) {
     if (stateRef.current && stateRef.current.transitioning) return;
     if (stateRef.current) stateRef.current.transitioning = true;
     sessionStorage.setItem(SESSION_KEY, 'true');
+
+    // Stage 1: rope + prompt fade quickly.
     setFadeOut(true);
-    setTimeout(() => onCompleteRef.current?.(), 800);
+    // Stage 2: curtain panels peel apart, revealing the site underneath.
+    // Slight overlap with stage 1 so the motion feels continuous rather
+    // than like two separate cuts.
+    requestAnimationFrame(() => {
+      setTimeout(() => setReveal(true), 120);
+    });
+
+    setTimeout(() => onCompleteRef.current?.(), REVEAL_MS);
   }, []); // stable forever — no dependency on the onComplete prop
 
   useEffect(() => {
@@ -78,12 +92,14 @@ export default function RopeIntro({ onComplete }) {
         stateRef.current.segLen = segLen;
 
         if (!stateRef.current.dropped && stateRef.current.points) {
+          // Still bunched at the top, waiting to drop — keep every point
+          // pinned at the anchor so a resize before the drop doesn't
+          // pre-stretch the rope.
           for (let i = 0; i <= SEGMENTS; i++) {
-            const y = i * segLen;
             stateRef.current.points[i].x = centerX;
-            stateRef.current.points[i].y = y;
+            stateRef.current.points[i].y = 0;
             stateRef.current.points[i].ox = centerX;
-            stateRef.current.points[i].oy = y;
+            stateRef.current.points[i].oy = 0;
           }
         } else if (stateRef.current.points && stateRef.current.points[0]) {
           stateRef.current.points[0].x = centerX;
@@ -97,10 +113,19 @@ export default function RopeIntro({ onComplete }) {
     const initCenterX = initWidth / 2;
     const initSegLen = (initHeight * 0.38) / SEGMENTS;
 
+    // All points start bunched at the anchor (top-middle), not stretched
+    // out to their resting length. This is what makes the rope actually
+    // fall/unfurl under gravity instead of appearing already-extended and
+    // just sagging.
     const points = [];
     for (let i = 0; i <= SEGMENTS; i++) {
-      const y = i * initSegLen;
-      points.push({ x: initCenterX, y, ox: initCenterX, oy: y, pinned: true });
+      points.push({
+        x: initCenterX,
+        y: 0,
+        ox: initCenterX,
+        oy: 0,
+        pinned: true,
+      });
     }
 
     const state = {
@@ -127,20 +152,33 @@ export default function RopeIntro({ onComplete }) {
       st.dropped = true;
 
       const pts = st.points;
+      // Anchor point stays pinned at the top.
       pts[0].pinned = true;
       pts[0].x = st.centerX;
       pts[0].y = 0;
       pts[0].ox = st.centerX;
       pts[0].oy = 0;
 
+      // Everything else is released from the bunched-up start position and
+      // falls under gravity; the distance constraints pull it taut as it
+      // drops, which reads as the rope unspooling from the anchor.
       for (let i = 1; i < pts.length; i++) {
         pts[i].pinned = false;
-        pts[i].ox = pts[i].x + (Math.random() - 0.5) * 4;
+        pts[i].x = st.centerX + (Math.random() - 0.5) * 4;
+        pts[i].y = 0;
+        pts[i].ox = pts[i].x;
+        pts[i].oy = 0;
       }
 
-      setShowPrompt(true);
-      const last = pts[pts.length - 1];
-      setPromptY(last.y + 45);
+      // The prompt appears once the rope has had time to settle near its
+      // resting length rather than immediately at drop time.
+      setTimeout(() => {
+        const cur = stateRef.current;
+        if (!cur || cur.transitioning) return;
+        setShowPrompt(true);
+        const last = cur.points[cur.points.length - 1];
+        setPromptY(last.y + 45);
+      }, 650);
     }, 2000);
 
     function update() {
@@ -187,7 +225,7 @@ export default function RopeIntro({ onComplete }) {
       }
 
       const last = pts[pts.length - 1];
-      if (!st.grabbed) setPromptY(last.y + 45);
+      if (!st.grabbed && showPromptRef.current) setPromptY(last.y + 45);
 
       const restY = st.height * 0.38;
       if (st.grabbed) {
@@ -366,6 +404,12 @@ export default function RopeIntro({ onComplete }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [skip]);
 
+  // Ref mirror of showPrompt so the rAF loop (which reads state via
+  // stateRef, not React state) knows whether it's safe to call setPromptY
+  // every frame without setting up a new effect dependency.
+  const showPromptRef = useRef(false);
+  useEffect(() => { showPromptRef.current = showPrompt; }, [showPrompt]);
+
   if (skip) return null;
 
   return (
@@ -373,60 +417,99 @@ export default function RopeIntro({ onComplete }) {
       style={{
         position: 'fixed',
         inset: 0,
-        background: '#FFFFFF',
         zIndex: 9999,
-        opacity: fadeOut ? 0 : 1,
-        filter: fadeOut ? 'blur(8px)' : 'blur(0px)',
-        transform: fadeOut ? 'scale(1.05)' : 'scale(1)',
-        transition: 'opacity 0.8s ease, filter 0.8s ease, transform 0.8s ease',
-        pointerEvents: fadeOut ? 'none' : 'auto',
+        pointerEvents: reveal ? 'none' : 'auto',
       }}
     >
-      <canvas ref={canvasRef} />
-
-      {showPrompt && !fadeOut && (
-        <div
-          style={{
-            position: 'absolute',
-            left: '50%',
-            top: `${promptY}px`,
-            transform: 'translateX(-50%)',
-            textAlign: 'center',
-            fontFamily: 'system-ui, sans-serif',
-            color: '#4a4a4a',
-            letterSpacing: '0.15em',
-            fontSize: '13px',
-            fontWeight: 600,
-            textTransform: 'uppercase',
-            pointerEvents: 'none',
-            userSelect: 'none',
-          }}
-        >
-          <p style={{ margin: 0 }}>Pull this rope</p>
-          <span style={{ display: 'block', marginTop: 6, fontSize: 16 }}>↓</span>
-        </div>
-      )}
-
-      <button
-        onClick={handleComplete}
+      {/* Curtain layer: sits BEHIND the rope so the canvas draws on top of
+          it. Two solid panels that peel apart to reveal the site
+          underneath — this must be earlier in the DOM than the rope layer
+          below, or it paints over the canvas and hides everything. */}
+      <div
         style={{
           position: 'absolute',
-          top: 24,
-          right: 24,
-          padding: '10px 20px',
-          borderRadius: 999,
-          border: '1px solid #ccc',
-          background: 'transparent',
-          color: '#444',
-          fontSize: 12,
-          letterSpacing: '0.1em',
-          textTransform: 'uppercase',
-          fontWeight: 600,
-          cursor: 'pointer',
+          top: 0,
+          left: 0,
+          width: '50%',
+          height: '100%',
+          background: '#FFFFFF',
+          transform: reveal ? 'translateX(-100%)' : 'translateX(0%)',
+          transition: 'transform 0.85s cubic-bezier(0.65, 0, 0.35, 1)',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          width: '50%',
+          height: '100%',
+          background: '#FFFFFF',
+          transform: reveal ? 'translateX(100%)' : 'translateX(0%)',
+          transition: 'transform 0.85s cubic-bezier(0.65, 0, 0.35, 1)',
+        }}
+      />
+
+      {/* Rope layer: fades/blurs out quickly once released. Rendered after
+          the curtain panels so it paints on top of them. */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          opacity: fadeOut ? 0 : 1,
+          filter: fadeOut ? 'blur(6px)' : 'blur(0px)',
+          transform: fadeOut ? 'scale(1.03)' : 'scale(1)',
+          transition: 'opacity 0.4s ease, filter 0.4s ease, transform 0.4s ease',
         }}
       >
-        Skip Intro
-      </button>
+        <canvas ref={canvasRef} />
+
+        {showPrompt && !fadeOut && (
+          <div
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: `${promptY}px`,
+              transform: 'translateX(-50%)',
+              textAlign: 'center',
+              fontFamily: 'system-ui, sans-serif',
+              color: '#4a4a4a',
+              letterSpacing: '0.15em',
+              fontSize: '13px',
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              pointerEvents: 'none',
+              userSelect: 'none',
+            }}
+          >
+            <p style={{ margin: 0 }}>Pull this rope</p>
+            <span style={{ display: 'block', marginTop: 6, fontSize: 16 }}>↓</span>
+          </div>
+        )}
+
+        <button
+          onClick={handleComplete}
+          style={{
+            position: 'absolute',
+            top: 24,
+            right: 24,
+            padding: '10px 20px',
+            borderRadius: 999,
+            border: '1px solid #ccc',
+            background: 'transparent',
+            color: '#444',
+            fontSize: 12,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            fontWeight: 600,
+            cursor: 'pointer',
+            opacity: fadeOut ? 0 : 1,
+            transition: 'opacity 0.3s ease',
+          }}
+        >
+          Skip Intro
+        </button>
+      </div>
     </div>
   );
 }
